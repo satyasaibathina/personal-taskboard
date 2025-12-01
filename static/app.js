@@ -440,111 +440,39 @@ function renderTaskCard(task, container) {
     `;
     container.appendChild(card);
 }
-
-// --- Helpers ---
-
-// --- Subtask & Recurrence Logic ---
-
-document.getElementById('task-recurring').addEventListener('change', (e) => {
-    document.getElementById('task-recurrence-rule').disabled = !e.target.checked;
+projectSelect.innerHTML = '<option value="">No Project</option>';
+state.projects.forEach(p => {
+    const option = document.createElement('option');
+    option.value = p.id;
+    option.textContent = p.name;
+    projectSelect.appendChild(option);
 });
 
-document.getElementById('add-subtask-btn').addEventListener('click', async () => {
-    const input = document.getElementById('new-subtask-input');
-    const title = input.value.trim();
-    const parentId = document.getElementById('task-id').value;
+if (task) {
+    elements.modalTitle.textContent = 'Edit Task';
+    document.getElementById('task-id').value = task.id;
+    document.getElementById('task-title').value = task.title;
+    document.getElementById('task-desc').value = task.description;
+    document.getElementById('task-date').value = task.dueDate;
+    document.getElementById('task-priority').value = task.priority;
+    document.getElementById('task-project').value = task.projectId || '';
 
-    if (title && parentId) {
-        // Create subtask immediately
-        await saveTask({
-            title: title,
-            parentId: parseInt(parentId),
-            status: 'pending',
-            priority: 'medium',
-            dueDate: document.getElementById('task-date').value, // Inherit date?
-            userId: state.currentUser.id
-        });
-        input.value = '';
-        // Refresh subtask list
-        renderSubtasksInModal(parentId);
-    } else if (!parentId) {
-        alert("Please save the main task first before adding subtasks.");
-    }
-});
+    // Recurrence
+    document.getElementById('task-recurring').checked = task.isRecurring || false;
+    document.getElementById('task-recurrence-rule').value = task.recurrenceRule || 'daily';
+    document.getElementById('task-recurrence-rule').disabled = !task.isRecurring;
 
-function renderSubtasksInModal(parentId) {
-    const list = document.getElementById('subtask-list');
-    list.innerHTML = '';
-    const subtasks = state.tasks.filter(t => t.parentId == parentId);
-
-    subtasks.forEach(st => {
-        const item = document.createElement('div');
-        item.className = 'subtask-item';
-        item.style.display = 'flex';
-        item.style.alignItems = 'center';
-        item.style.gap = '10px';
-        item.style.marginBottom = '5px';
-        item.innerHTML = `
-            <input type="checkbox" ${st.status === 'completed' ? 'checked' : ''} onchange="toggleTaskStatus(${st.id})">
-            <span style="${st.status === 'completed' ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${st.title}</span>
-            <button onclick="deleteTask(${st.id})" style="margin-left: auto; background: none; border: none; cursor: pointer;">🗑️</button>
-        `;
-        list.appendChild(item);
-    });
+    // Subtasks
+    document.getElementById('subtasks-section').classList.remove('hidden');
+    renderSubtasksInModal(task.id);
+} else {
+    elements.modalTitle.textContent = 'New Task';
+    elements.taskForm.reset();
+    document.getElementById('task-id').value = '';
+    document.getElementById('task-date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('subtasks-section').classList.add('hidden'); // Hide subtasks for new task until saved
+    document.getElementById('task-recurrence-rule').disabled = true;
 }
-
-elements.taskForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    saveTask({
-        id: document.getElementById('task-id').value,
-        title: document.getElementById('task-title').value,
-        description: document.getElementById('task-desc').value,
-        dueDate: document.getElementById('task-date').value,
-        priority: document.getElementById('task-priority').value,
-        projectId: document.getElementById('task-project').value ? parseInt(document.getElementById('task-project').value) : null,
-        isRecurring: document.getElementById('task-recurring').checked,
-        recurrenceRule: document.getElementById('task-recurrence-rule').value
-    });
-});
-
-function openModal(task = null) {
-    elements.modal.classList.remove('hidden');
-
-    // Populate Projects Dropdown
-    const projectSelect = document.getElementById('task-project');
-    projectSelect.innerHTML = '<option value="">No Project</option>';
-    state.projects.forEach(p => {
-        const option = document.createElement('option');
-        option.value = p.id;
-        option.textContent = p.name;
-        projectSelect.appendChild(option);
-    });
-
-    if (task) {
-        elements.modalTitle.textContent = 'Edit Task';
-        document.getElementById('task-id').value = task.id;
-        document.getElementById('task-title').value = task.title;
-        document.getElementById('task-desc').value = task.description;
-        document.getElementById('task-date').value = task.dueDate;
-        document.getElementById('task-priority').value = task.priority;
-        document.getElementById('task-project').value = task.projectId || '';
-
-        // Recurrence
-        document.getElementById('task-recurring').checked = task.isRecurring || false;
-        document.getElementById('task-recurrence-rule').value = task.recurrenceRule || 'daily';
-        document.getElementById('task-recurrence-rule').disabled = !task.isRecurring;
-
-        // Subtasks
-        document.getElementById('subtasks-section').classList.remove('hidden');
-        renderSubtasksInModal(task.id);
-    } else {
-        elements.modalTitle.textContent = 'New Task';
-        elements.taskForm.reset();
-        document.getElementById('task-id').value = '';
-        document.getElementById('task-date').value = new Date().toISOString().split('T')[0];
-        document.getElementById('subtasks-section').classList.add('hidden'); // Hide subtasks for new task until saved
-        document.getElementById('task-recurrence-rule').disabled = true;
-    }
 }
 
 initAuth();

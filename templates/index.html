@@ -145,6 +145,70 @@
         </div>
 
         <!-- Task Modal -->
+        <div id="task-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modal-title">New Task</h3>
+                    <button id="close-modal" class="close-btn">&times;</button>
+                </div>
+                <form id="task-form">
+                    <input type="hidden" id="task-id">
+                    <div class="form-group">
+                        <label for="task-title">Title</label>
+                        <input type="text" id="task-title" required placeholder="What needs to be done?">
+                    </div>
+                    <div class="form-group">
+                        <label for="task-desc">Description</label>
+                        <textarea id="task-desc" rows="3" placeholder="Add details..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="task-date">Due Date</label>
+                        <input type="date" id="task-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="task-project">Project</label>
+                        <select id="task-project">
+                            <option value="">No Project</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="task-priority">Priority</label>
+                        <select id="task-priority">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Recurrence</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="checkbox" id="task-recurring" style="width: auto;">
+                            <label for="task-recurring" style="margin: 0;">Repeat</label>
+                            <select id="task-recurrence-rule" disabled>
+                                <option value="daily">Daily</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly">Monthly</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="subtasks-section" class="form-group hidden">
+                        <label>Subtasks</label>
+                        <div id="subtask-list" style="margin-bottom: 10px;"></div>
+                        <div style="display: flex; gap: 5px;">
+                            <input type="text" id="new-subtask-input" placeholder="Add a step...">
+                            <button type="button" id="add-subtask-btn" class="btn btn-secondary">Add</button>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" id="cancel-task" class="btn btn-secondary">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Task</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
     <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
