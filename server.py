@@ -51,12 +51,31 @@ def init_db():
     try:
         conn = sqlite3.connect(DB_NAME)
         c = conn.cursor()
+        
         # Users Table
         c.execute('''CREATE TABLE IF NOT EXISTS users
                      (id INTEGER PRIMARY KEY AUTOINCREMENT, 
                       username TEXT UNIQUE NOT NULL, 
                       password TEXT NOT NULL)''')
-        # Tasks Table
+
+        # Projects Table (New)
+        c.execute('''CREATE TABLE IF NOT EXISTS projects
+                     (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                      name TEXT NOT NULL,
+                      color TEXT,
+                      user_id INTEGER,
+                      FOREIGN KEY(user_id) REFERENCES users(id))''')
+
+        # Settings Table (New)
+        c.execute('''CREATE TABLE IF NOT EXISTS settings
+                     (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                      user_id INTEGER UNIQUE,
+                      theme TEXT DEFAULT 'light',
+                      working_hours_start TEXT DEFAULT '09:00',
+                      working_hours_end TEXT DEFAULT '17:00',
+                      FOREIGN KEY(user_id) REFERENCES users(id))''')
+
+        # Tasks Table (Updated)
         c.execute('''CREATE TABLE IF NOT EXISTS tasks
                      (id INTEGER PRIMARY KEY AUTOINCREMENT, 
                       title TEXT NOT NULL, 
@@ -65,10 +84,37 @@ def init_db():
                       priority TEXT, 
                       status TEXT, 
                       user_id INTEGER,
-                      FOREIGN KEY(user_id) REFERENCES users(id))''')
+                      project_id INTEGER,
+                      parent_id INTEGER,
+                      is_recurring BOOLEAN DEFAULT 0,
+                      recurrence_rule TEXT,
+                      completed_at TEXT,
+                      reminder_time TEXT,
+                      FOREIGN KEY(user_id) REFERENCES users(id),
+                      FOREIGN KEY(project_id) REFERENCES projects(id))''')
+        
+        # Migration: Add new columns to existing tasks table if they don't exist
+        # SQLite doesn't support IF NOT EXISTS for columns, so we try/except
+        migrations = [
+            "ALTER TABLE tasks ADD COLUMN project_id INTEGER REFERENCES projects(id)",
+            "ALTER TABLE tasks ADD COLUMN parent_id INTEGER",
+            "ALTER TABLE tasks ADD COLUMN is_recurring BOOLEAN DEFAULT 0",
+            "ALTER TABLE tasks ADD COLUMN recurrence_rule TEXT",
+            "ALTER TABLE tasks ADD COLUMN completed_at TEXT",
+            "ALTER TABLE tasks ADD COLUMN reminder_time TEXT"
+        ]
+        
+        for migration in migrations:
+            try:
+                c.execute(migration)
+                logger.info(f"Applied migration: {migration}")
+            except sqlite3.OperationalError:
+                # Column likely already exists
+                pass
+
         conn.commit()
         conn.close()
-        logger.info("Database initialized successfully.")
+        logger.info("Database initialized successfully with V2 schema.")
     except Exception as e:
         logger.error(f"Error initializing database: {e}")
 
