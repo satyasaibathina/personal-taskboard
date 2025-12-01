@@ -5,6 +5,7 @@ import os
 
 import logging
 import sys
+import re
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -87,6 +88,17 @@ def register():
     
     if not username or not password:
         return jsonify({'error': 'Username and password required'}), 400
+
+    # Email Validation
+    email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if not re.match(email_regex, username):
+        return jsonify({'error': 'Username must be a valid email address'}), 400
+
+    # Password Validation
+    # At least 8 chars, 1 uppercase, 1 number, 1 special char
+    password_regex = r'^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$'
+    if not re.match(password_regex, password):
+        return jsonify({'error': 'Password must be at least 8 characters long, contain one uppercase letter, one number, and one special character'}), 400
         
     conn = get_db_connection()
     try:
