@@ -13,18 +13,7 @@
 
 <body>
     <div id="app">
-        <!-- Navigation -->
-        <nav id="navbar" class="hidden">
-            <div class="nav-content">
-                <div class="logo">TaskMaster</div>
-                <div class="user-info">
-                    <span id="nav-username"></span>
-                    <button id="logout-btn" class="btn btn-secondary">Logout</button>
-                </div>
-            </div>
-        </nav>
-
-        <!-- Auth Container -->
+        <!-- Auth Container (Login/Register) -->
         <div id="auth-container" class="container">
             <!-- Login View -->
             <div id="login-view" class="auth-card active">
@@ -71,19 +60,114 @@
             </div>
         </div>
 
-        <!-- Dashboard View -->
-        <div id="dashboard-view" class="container hidden">
-            <header class="dashboard-header">
-                <div>
-                    <h2>My Tasks</h2>
-                    <p id="task-stats">You have 0 pending tasks</p>
+        <!-- Main App Layout (Hidden until logged in) -->
+        <div id="app-layout" class="hidden">
+            <!-- Sidebar -->
+            <aside id="sidebar">
+                <div class="sidebar-header">
+                    <div class="logo">TaskMaster</div>
                 </div>
-                <button id="add-task-btn" class="btn btn-primary">+ New Task</button>
-            </header>
 
-            <div id="task-list" class="task-grid">
-                <!-- Tasks will be injected here -->
-            </div>
+                <nav class="sidebar-nav">
+                    <div class="nav-section">
+                        <h3>Main</h3>
+                        <a href="#" class="nav-item active" data-view="dashboard-view">
+                            <span class="icon">🏠</span> Dashboard
+                        </a>
+                        <a href="#" class="nav-item" data-view="today-view">
+                            <span class="icon">☀️</span> Today
+                        </a>
+                        <a href="#" class="nav-item" data-view="upcoming-view">
+                            <span class="icon">📅</span> Upcoming
+                        </a>
+                        <a href="#" class="nav-item" data-view="calendar-view">
+                            <span class="icon">🗓️</span> Calendar
+                        </a>
+                    </div>
+
+                    <div class="nav-section">
+                        <h3>Projects</h3>
+                        <a href="#" class="nav-item" data-view="projects-view">
+                            <span class="icon">📁</span> All Projects
+                        </a>
+                        <!-- Dynamic projects will go here -->
+                    </div>
+
+                    <div class="nav-section">
+                        <h3>Other</h3>
+                        <a href="#" class="nav-item" data-view="settings-view">
+                            <span class="icon">⚙️</span> Settings
+                        </a>
+                    </div>
+                </nav>
+
+                <div class="sidebar-footer">
+                    <div class="user-profile">
+                        <div class="avatar">👤</div>
+                        <div class="user-details">
+                            <span id="nav-username">User</span>
+                            <small>Free Plan</small>
+                        </div>
+                    </div>
+                    <button id="logout-btn" class="btn-icon" title="Logout">🚪</button>
+                </div>
+            </aside>
+
+            <!-- Main Content Area -->
+            <main id="main-content">
+                <!-- Dashboard View -->
+                <div id="dashboard-view" class="view-section active">
+                    <header class="view-header">
+                        <div>
+                            <h2>Dashboard</h2>
+                            <p id="task-stats">Overview of your tasks</p>
+                        </div>
+                        <button id="add-task-btn" class="btn btn-primary">+ New Task</button>
+                    </header>
+
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3>Tasks Today</h3>
+                            <p class="stat-value" id="stat-today">0</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Pending</h3>
+                            <p class="stat-value" id="stat-pending">0</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Completed</h3>
+                            <p class="stat-value" id="stat-completed">0</p>
+                        </div>
+                    </div>
+
+                    <h3 class="section-title">Recent Tasks</h3>
+                    <div id="task-list" class="task-grid">
+                        <!-- Tasks injected here -->
+                    </div>
+                </div>
+
+                <!-- Placeholders for other views -->
+                <div id="today-view" class="view-section hidden">
+                    <h2>Today's Tasks</h2>
+                    <p>Tasks due today will appear here.</p>
+                </div>
+                <div id="upcoming-view" class="view-section hidden">
+                    <h2>Upcoming</h2>
+                    <p>Future tasks timeline.</p>
+                </div>
+                <div id="calendar-view" class="view-section hidden">
+                    <h2>Calendar</h2>
+                    <p>Calendar view coming soon.</p>
+                </div>
+                <div id="projects-view" class="view-section hidden">
+                    <h2>Projects</h2>
+                    <p>Project management coming soon.</p>
+                </div>
+                <div id="settings-view" class="view-section hidden">
+                    <h2>Settings</h2>
+                    <p>User preferences coming soon.</p>
+                </div>
+            </main>
         </div>
 
         <!-- Task Modal -->

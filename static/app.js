@@ -12,11 +12,31 @@ const elements = {
     authContainer: document.getElementById('auth-container'),
     loginView: document.getElementById('login-view'),
     registerView: document.getElementById('register-view'),
-    dashboardView: document.getElementById('dashboard-view'),
-    navbar: document.getElementById('navbar'),
+
+    // Main Layout
+    appLayout: document.getElementById('app-layout'),
+    sidebar: document.getElementById('sidebar'),
+    mainContent: document.getElementById('main-content'),
     navUsername: document.getElementById('nav-username'),
+
+    // Views
+    views: {
+        'dashboard-view': document.getElementById('dashboard-view'),
+        'today-view': document.getElementById('today-view'),
+        'upcoming-view': document.getElementById('upcoming-view'),
+        'calendar-view': document.getElementById('calendar-view'),
+        'projects-view': document.getElementById('projects-view'),
+        'settings-view': document.getElementById('settings-view')
+    },
+
+    // Dashboard Specifics
     taskList: document.getElementById('task-list'),
     taskStats: document.getElementById('task-stats'),
+    statToday: document.getElementById('stat-today'),
+    statPending: document.getElementById('stat-pending'),
+    statCompleted: document.getElementById('stat-completed'),
+
+    // Modals & Forms
     modal: document.getElementById('task-modal'),
     taskForm: document.getElementById('task-form'),
     modalTitle: document.getElementById('modal-title'),
@@ -30,7 +50,7 @@ function initAuth() {
     if (storedUser) {
         state.currentUser = JSON.parse(storedUser);
         loadTasks();
-        showDashboard();
+        showAppLayout();
     } else {
         showLogin();
     }
@@ -69,7 +89,7 @@ async function login(username, password) {
             state.currentUser = data;
             localStorage.setItem('currentUser', JSON.stringify(data));
             loadTasks();
-            showDashboard();
+            showAppLayout();
             showToast(`Welcome back, ${data.username}!`);
         } else {
             showToast(data.error || 'Login failed');
@@ -95,7 +115,7 @@ async function loadTasks() {
         const res = await fetch(`${API_URL}/tasks?userId=${state.currentUser.id}`);
         if (res.ok) {
             state.tasks = await res.json();
-            renderTasks();
+            renderDashboard();
         }
     } catch (err) {
         console.error(err);
@@ -155,7 +175,7 @@ async function toggleTaskStatus(id) {
         const newStatus = task.status === 'pending' ? 'completed' : 'pending';
         // Optimistic update
         task.status = newStatus;
-        renderTasks();
+        renderDashboard();
 
         try {
             await fetch(`${API_URL}/tasks/${id}`, {
@@ -175,30 +195,72 @@ async function toggleTaskStatus(id) {
 
 function showLogin() {
     elements.authContainer.classList.remove('hidden');
-    elements.dashboardView.classList.add('hidden');
-    elements.navbar.classList.add('hidden');
+    elements.appLayout.classList.add('hidden');
     elements.loginView.classList.add('active');
     elements.registerView.classList.remove('active');
 }
 
-function showDashboard() {
+function showAppLayout() {
     elements.authContainer.classList.add('hidden');
-    elements.dashboardView.classList.remove('hidden');
-    elements.navbar.classList.remove('hidden');
+    elements.appLayout.classList.remove('hidden');
     elements.navUsername.textContent = state.currentUser.username;
+    switchView('dashboard-view'); // Default view
 }
 
-function renderTasks() {
+function switchView(viewId) {
+    // Hide all views
+    Object.values(elements.views).forEach(el => el.classList.add('hidden'));
+    Object.values(elements.views).forEach(el => el.classList.remove('active'));
+
+    // Show target view
+    const targetView = elements.views[viewId];
+    if (targetView) {
+        targetView.classList.remove('hidden');
+        targetView.classList.add('active'); // For CSS animations if needed
+    }
+
+    // Update Sidebar Active State
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+        if (item.dataset.view === viewId) {
+            item.classList.add('active');
+        }
+    });
+}
+
+function renderDashboard() {
+    // Update Stats
+    const total = state.tasks.length;
+    const pending = state.tasks.filter(t => t.status === 'pending').length;
+    const completed = state.tasks.filter(t => t.status === 'completed').length;
+
+    // Simple "Today" check (local date string match)
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayCount = state.tasks.filter(t => t.dueDate === todayStr).length;
+
+    elements.statPending.textContent = pending;
+    elements.statCompleted.textContent = completed;
+    elements.statToday.textContent = todayCount;
+    elements.taskStats.textContent = `You have ${pending} pending task${pending !== 1 ? 's' : ''}`;
+
+    // Render Task List (Recent 5 or all?)
+    // For now, render all pending tasks first, then completed
     elements.taskList.innerHTML = '';
-    const pendingCount = state.tasks.filter(t => t.status === 'pending').length;
-    elements.taskStats.textContent = `You have ${pendingCount} pending task${pendingCount !== 1 ? 's' : ''}`;
 
     if (state.tasks.length === 0) {
         elements.taskList.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted);">No tasks found. Create one to get started!</p>';
         return;
     }
 
-    state.tasks.forEach(task => {
+    // Sort: Pending first, then by date
+    const sortedTasks = [...state.tasks].sort((a, b) => {
+        if (a.status === b.status) {
+            return new Date(a.dueDate) - new Date(b.dueDate);
+        }
+        return a.status === 'pending' ? -1 : 1;
+    });
+
+    sortedTasks.forEach(task => {
         const card = document.createElement('div');
         card.className = 'task-card';
         if (task.status === 'completed') card.style.opacity = '0.6';
@@ -212,11 +274,11 @@ function renderTasks() {
             <div class="task-meta">
                 <span>📅 ${new Date(task.dueDate).toLocaleDateString()}</span>
                 <div class="task-actions">
-                    <button class="btn btn-secondary btn-icon" onclick="toggleTaskStatus(${task.id})">
+                    <button class="btn btn-secondary btn-icon" onclick="toggleTaskStatus(${task.id})" title="${task.status === 'pending' ? 'Mark Complete' : 'Mark Pending'}">
                         ${task.status === 'pending' ? '✅' : '↩️'}
                     </button>
-                    <button class="btn btn-secondary btn-icon" onclick="editTask(${task.id})">✏️</button>
-                    <button class="btn btn-secondary btn-icon" onclick="deleteTask(${task.id})">🗑️</button>
+                    <button class="btn btn-secondary btn-icon" onclick="editTask(${task.id})" title="Edit">✏️</button>
+                    <button class="btn btn-secondary btn-icon" onclick="deleteTask(${task.id})" title="Delete">🗑️</button>
                 </div>
             </div>
         `;
@@ -237,6 +299,8 @@ function openModal(task = null) {
         elements.modalTitle.textContent = 'New Task';
         elements.taskForm.reset();
         document.getElementById('task-id').value = '';
+        // Default date to today
+        document.getElementById('task-date').value = new Date().toISOString().split('T')[0];
     }
 }
 
@@ -259,6 +323,15 @@ window.deleteTask = deleteTask;
 window.toggleTaskStatus = toggleTaskStatus;
 
 // --- Event Listeners ---
+
+// Navigation
+document.querySelectorAll('.nav-item').forEach(link => {
+    link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const viewId = link.dataset.view;
+        if (viewId) switchView(viewId);
+    });
+});
 
 document.getElementById('show-register').addEventListener('click', (e) => {
     e.preventDefault();
