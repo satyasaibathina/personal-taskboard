@@ -172,6 +172,29 @@ def login():
     else:
         return jsonify({'error': 'Invalid credentials'}), 401
 
+@app.route('/api/projects', methods=['GET'])
+def get_projects():
+    user_id = request.args.get('userId')
+    if not user_id:
+        return jsonify({'error': 'User ID required'}), 400
+    
+    conn = get_db_connection()
+    projects = conn.execute('SELECT * FROM projects WHERE user_id = ?', (user_id,)).fetchall()
+    conn.close()
+    
+    return jsonify([dict(p) for p in projects]), 200
+
+@app.route('/api/projects', methods=['POST'])
+def create_project():
+    data = request.json
+    conn = get_db_connection()
+    cursor = conn.execute('INSERT INTO projects (name, color, user_id) VALUES (?, ?, ?)',
+                          (data['name'], data['color'], data['userId']))
+    conn.commit()
+    new_id = cursor.lastrowid
+    conn.close()
+    return jsonify({'id': new_id, **data}), 201
+
 @app.route('/api/tasks', methods=['GET'])
 def get_tasks():
     user_id = request.args.get('userId')
@@ -183,9 +206,6 @@ def get_tasks():
     conn.close()
     
     tasks_list = [dict(task) for task in tasks]
-    # Convert keys to camelCase for frontend compatibility if needed, or handle in frontend.
-    # For simplicity, we'll keep snake_case in DB and map in frontend or here.
-    # Let's map here to match existing frontend expectations
     mapped_tasks = []
     for t in tasks_list:
         mapped_tasks.append({
@@ -195,7 +215,8 @@ def get_tasks():
             'dueDate': t['due_date'],
             'priority': t['priority'],
             'status': t['status'],
-            'userId': t['user_id']
+            'userId': t['user_id'],
+            'projectId': t['project_id']
         })
         
     return jsonify(mapped_tasks), 200
@@ -205,8 +226,8 @@ def create_task():
     data = request.json
     conn = get_db_connection()
     cursor = conn.execute(
-        'INSERT INTO tasks (title, description, due_date, priority, status, user_id) VALUES (?, ?, ?, ?, ?, ?)',
-        (data['title'], data['description'], data['dueDate'], data['priority'], data['status'], data['userId'])
+        'INSERT INTO tasks (title, description, due_date, priority, status, user_id, project_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        (data['title'], data['description'], data['dueDate'], data['priority'], data['status'], data['userId'], data.get('projectId'))
     )
     conn.commit()
     new_id = cursor.lastrowid
@@ -219,8 +240,8 @@ def update_task(id):
     data = request.json
     conn = get_db_connection()
     conn.execute(
-        'UPDATE tasks SET title = ?, description = ?, due_date = ?, priority = ?, status = ? WHERE id = ?',
-        (data['title'], data['description'], data['dueDate'], data['priority'], data['status'], id)
+        'UPDATE tasks SET title = ?, description = ?, due_date = ?, priority = ?, status = ?, project_id = ? WHERE id = ?',
+        (data['title'], data['description'], data['dueDate'], data['priority'], data['status'], data.get('projectId'), id)
     )
     conn.commit()
     conn.close()

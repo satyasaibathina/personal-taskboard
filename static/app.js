@@ -1,7 +1,8 @@
 // State Management
 const state = {
     currentUser: null,
-    tasks: []
+    tasks: [],
+    projects: []
 };
 
 const API_URL = '/api';
@@ -49,7 +50,7 @@ function initAuth() {
     const storedUser = localStorage.getItem('currentUser');
     if (storedUser) {
         state.currentUser = JSON.parse(storedUser);
-        loadTasks();
+        loadData();
         showAppLayout();
     } else {
         showLogin();
@@ -88,7 +89,7 @@ async function login(username, password) {
         if (res.ok) {
             state.currentUser = data;
             localStorage.setItem('currentUser', JSON.stringify(data));
-            loadTasks();
+            loadData();
             showAppLayout();
             showToast(`Welcome back, ${data.username}!`);
         } else {
@@ -103,23 +104,35 @@ async function login(username, password) {
 function logout() {
     state.currentUser = null;
     state.tasks = [];
+    state.projects = [];
     localStorage.removeItem('currentUser');
     showLogin();
 }
 
-// --- Task Management ---
+// --- Data Management ---
+
+async function loadData() {
+    if (!state.currentUser) return;
+    await Promise.all([loadTasks(), loadProjects()]);
+    renderDashboard(); // Initial render
+}
 
 async function loadTasks() {
-    if (!state.currentUser) return;
     try {
         const res = await fetch(`${API_URL}/tasks?userId=${state.currentUser.id}`);
-        if (res.ok) {
-            state.tasks = await res.json();
-            renderDashboard();
-        }
+        if (res.ok) state.tasks = await res.json();
     } catch (err) {
         console.error(err);
         showToast('Failed to load tasks');
+    }
+}
+
+async function loadProjects() {
+    try {
+        const res = await fetch(`${API_URL}/projects?userId=${state.currentUser.id}`);
+        if (res.ok) state.projects = await res.json();
+    } catch (err) {
+        console.error(err);
     }
 }
 
@@ -143,9 +156,10 @@ async function saveTask(task) {
         });
 
         if (res.ok) {
-            loadTasks();
+            await loadTasks();
             closeModal();
             showToast('Task saved successfully');
+            refreshCurrentView();
         } else {
             showToast('Failed to save task');
         }
@@ -160,8 +174,9 @@ async function deleteTask(id) {
     try {
         const res = await fetch(`${API_URL}/tasks/${id}`, { method: 'DELETE' });
         if (res.ok) {
-            loadTasks();
+            await loadTasks();
             showToast('Task deleted');
+            refreshCurrentView();
         }
     } catch (err) {
         console.error(err);
@@ -173,9 +188,8 @@ async function toggleTaskStatus(id) {
     const task = state.tasks.find(t => t.id == id);
     if (task) {
         const newStatus = task.status === 'pending' ? 'completed' : 'pending';
-        // Optimistic update
-        task.status = newStatus;
-        renderDashboard();
+        task.status = newStatus; // Optimistic
+        refreshCurrentView();
 
         try {
             await fetch(`${API_URL}/tasks/${id}`, {
@@ -186,8 +200,27 @@ async function toggleTaskStatus(id) {
         } catch (err) {
             console.error(err);
             showToast('Failed to update status');
-            loadTasks(); // Revert on error
+            await loadTasks();
+            refreshCurrentView();
         }
+    }
+}
+
+async function createProject(name, color) {
+    try {
+        const res = await fetch(`${API_URL}/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, color, userId: state.currentUser.id })
+        });
+        if (res.ok) {
+            await loadProjects();
+            renderProjectsView();
+            showToast('Project created');
+        }
+    } catch (err) {
+        console.error(err);
+        showToast('Failed to create project');
     }
 }
 
@@ -204,37 +237,39 @@ function showAppLayout() {
     elements.authContainer.classList.add('hidden');
     elements.appLayout.classList.remove('hidden');
     elements.navUsername.textContent = state.currentUser.username;
-    switchView('dashboard-view'); // Default view
+    switchView('dashboard-view');
 }
 
 function switchView(viewId) {
-    // Hide all views
     Object.values(elements.views).forEach(el => el.classList.add('hidden'));
-    Object.values(elements.views).forEach(el => el.classList.remove('active'));
 
-    // Show target view
     const targetView = elements.views[viewId];
-    if (targetView) {
-        targetView.classList.remove('hidden');
-        targetView.classList.add('active'); // For CSS animations if needed
-    }
+    if (targetView) targetView.classList.remove('hidden');
 
-    // Update Sidebar Active State
     document.querySelectorAll('.nav-item').forEach(item => {
         item.classList.remove('active');
-        if (item.dataset.view === viewId) {
-            item.classList.add('active');
-        }
+        if (item.dataset.view === viewId) item.classList.add('active');
     });
+
+    // Render specific view content
+    if (viewId === 'dashboard-view') renderDashboard();
+    if (viewId === 'today-view') renderTodayView();
+    if (viewId === 'upcoming-view') renderUpcomingView();
+    if (viewId === 'projects-view') renderProjectsView();
+    if (viewId === 'calendar-view') renderCalendarView();
+    if (viewId === 'settings-view') renderSettingsView();
 }
 
+function refreshCurrentView() {
+    const activeView = document.querySelector('.nav-item.active').dataset.view;
+    switchView(activeView);
+}
+
+// --- Renderers ---
+
 function renderDashboard() {
-    // Update Stats
-    const total = state.tasks.length;
     const pending = state.tasks.filter(t => t.status === 'pending').length;
     const completed = state.tasks.filter(t => t.status === 'completed').length;
-
-    // Simple "Today" check (local date string match)
     const todayStr = new Date().toISOString().split('T')[0];
     const todayCount = state.tasks.filter(t => t.dueDate === todayStr).length;
 
@@ -243,51 +278,184 @@ function renderDashboard() {
     elements.statToday.textContent = todayCount;
     elements.taskStats.textContent = `You have ${pending} pending task${pending !== 1 ? 's' : ''}`;
 
-    // Render Task List (Recent 5 or all?)
-    // For now, render all pending tasks first, then completed
     elements.taskList.innerHTML = '';
-
     if (state.tasks.length === 0) {
-        elements.taskList.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted);">No tasks found. Create one to get started!</p>';
+        elements.taskList.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted);">No tasks found.</p>';
         return;
     }
 
-    // Sort: Pending first, then by date
     const sortedTasks = [...state.tasks].sort((a, b) => {
-        if (a.status === b.status) {
-            return new Date(a.dueDate) - new Date(b.dueDate);
-        }
+        if (a.status === b.status) return new Date(a.dueDate) - new Date(b.dueDate);
         return a.status === 'pending' ? -1 : 1;
     });
 
-    sortedTasks.forEach(task => {
-        const card = document.createElement('div');
-        card.className = 'task-card';
-        if (task.status === 'completed') card.style.opacity = '0.6';
+    sortedTasks.forEach(task => renderTaskCard(task, elements.taskList));
+}
 
-        card.innerHTML = `
-            <div class="task-header">
-                <div class="task-title" style="${task.status === 'completed' ? 'text-decoration: line-through' : ''}">${task.title}</div>
-                <span class="priority-badge priority-${task.priority}">${task.priority}</span>
-            </div>
-            <div class="task-desc">${task.description || 'No description'}</div>
-            <div class="task-meta">
-                <span>📅 ${new Date(task.dueDate).toLocaleDateString()}</span>
-                <div class="task-actions">
-                    <button class="btn btn-secondary btn-icon" onclick="toggleTaskStatus(${task.id})" title="${task.status === 'pending' ? 'Mark Complete' : 'Mark Pending'}">
-                        ${task.status === 'pending' ? '✅' : '↩️'}
-                    </button>
-                    <button class="btn btn-secondary btn-icon" onclick="editTask(${task.id})" title="Edit">✏️</button>
-                    <button class="btn btn-secondary btn-icon" onclick="deleteTask(${task.id})" title="Delete">🗑️</button>
-                </div>
-            </div>
-        `;
-        elements.taskList.appendChild(card);
+function renderTodayView() {
+    const container = elements.views['today-view'];
+    container.innerHTML = `
+        <header class="view-header">
+            <div><h2>Today's Tasks</h2><p>Focus on what matters today.</p></div>
+            <button class="btn btn-primary" onclick="openModal()">+ New Task</button>
+        </header>
+        <div class="task-grid" id="today-task-list"></div>
+    `;
+    const list = document.getElementById('today-task-list');
+    const todayStr = new Date().toISOString().split('T')[0];
+    const tasks = state.tasks.filter(t => t.dueDate === todayStr);
+
+    if (tasks.length === 0) list.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted);">No tasks due today.</p>';
+    else tasks.forEach(t => renderTaskCard(t, list));
+}
+
+function renderUpcomingView() {
+    const container = elements.views['upcoming-view'];
+    container.innerHTML = `
+        <header class="view-header">
+            <div><h2>Upcoming Tasks</h2><p>Plan ahead.</p></div>
+            <button class="btn btn-primary" onclick="openModal()">+ New Task</button>
+        </header>
+        <div class="task-grid" id="upcoming-task-list"></div>
+    `;
+    const list = document.getElementById('upcoming-task-list');
+    const todayStr = new Date().toISOString().split('T')[0];
+    const tasks = state.tasks.filter(t => t.dueDate > todayStr).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+
+    if (tasks.length === 0) list.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted);">No upcoming tasks.</p>';
+    else tasks.forEach(t => renderTaskCard(t, list));
+}
+
+function renderProjectsView() {
+    const container = elements.views['projects-view'];
+    container.innerHTML = `
+        <header class="view-header">
+            <div><h2>Projects</h2><p>Organize your work.</p></div>
+            <button class="btn btn-primary" onclick="promptNewProject()">+ New Project</button>
+        </header>
+        <div class="stats-grid" id="project-list"></div>
+        <div id="project-tasks-container" style="margin-top: 2rem;"></div>
+    `;
+
+    const list = document.getElementById('project-list');
+    if (state.projects.length === 0) {
+        list.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted);">No projects yet.</p>';
+        return;
+    }
+
+    state.projects.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'stat-card';
+        card.style.cursor = 'pointer';
+        card.innerHTML = `<h3>${p.name}</h3>`;
+        card.onclick = () => renderProjectTasks(p.id);
+        list.appendChild(card);
     });
 }
 
+function renderProjectTasks(projectId) {
+    const container = document.getElementById('project-tasks-container');
+    const project = state.projects.find(p => p.id === projectId);
+    const tasks = state.tasks.filter(t => t.projectId === projectId);
+
+    container.innerHTML = `
+        <h3 class="section-title">${project.name} Tasks</h3>
+        <div class="task-grid">
+            ${tasks.length ? '' : '<p style="color: var(--text-muted);">No tasks in this project.</p>'}
+        </div>
+    `;
+
+    const grid = container.querySelector('.task-grid');
+    tasks.forEach(t => renderTaskCard(t, grid));
+}
+
+function renderCalendarView() {
+    const container = elements.views['calendar-view'];
+    // Simple list view grouped by date for now
+    container.innerHTML = `
+        <header class="view-header">
+            <div><h2>Calendar</h2><p>Timeline view.</p></div>
+            <button class="btn btn-primary" onclick="openModal()">+ New Task</button>
+        </header>
+        <div id="calendar-grid"></div>
+    `;
+
+    const grid = document.getElementById('calendar-grid');
+    const tasksByDate = {};
+    state.tasks.forEach(t => {
+        if (!tasksByDate[t.dueDate]) tasksByDate[t.dueDate] = [];
+        tasksByDate[t.dueDate].push(t);
+    });
+
+    const sortedDates = Object.keys(tasksByDate).sort();
+
+    sortedDates.forEach(date => {
+        const dateSection = document.createElement('div');
+        dateSection.style.marginBottom = '2rem';
+        dateSection.innerHTML = `<h3 style="margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">${new Date(date).toDateString()}</h3><div class="task-grid"></div>`;
+        const taskGrid = dateSection.querySelector('.task-grid');
+        tasksByDate[date].forEach(t => renderTaskCard(t, taskGrid));
+        grid.appendChild(dateSection);
+    });
+}
+
+function renderSettingsView() {
+    elements.views['settings-view'].innerHTML = `
+        <header class="view-header"><h2>Settings</h2></header>
+        <div class="auth-card active" style="max-width: 600px;">
+            <div class="form-group">
+                <label>Theme</label>
+                <select class="form-control" onchange="alert('Theme switching coming soon!')">
+                    <option>Light</option>
+                    <option>Dark</option>
+                </select>
+            </div>
+            <p style="color: var(--text-muted);">More settings coming soon.</p>
+        </div>
+    `;
+}
+
+function renderTaskCard(task, container) {
+    const card = document.createElement('div');
+    card.className = 'task-card';
+    if (task.status === 'completed') card.style.opacity = '0.6';
+
+    const project = state.projects.find(p => p.id === task.projectId);
+    const projectTag = project ? `<span style="font-size: 0.75rem; background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 12px; margin-left: 8px;">${project.name}</span>` : '';
+
+    card.innerHTML = `
+        <div class="task-header">
+            <div class="task-title" style="${task.status === 'completed' ? 'text-decoration: line-through' : ''}">${task.title}</div>
+            <span class="priority-badge priority-${task.priority}">${task.priority}</span>
+        </div>
+        <div class="task-desc">${task.description || 'No description'}</div>
+        <div class="task-meta">
+            <span>📅 ${new Date(task.dueDate).toLocaleDateString()} ${projectTag}</span>
+            <div class="task-actions">
+                <button class="btn btn-secondary btn-icon" onclick="toggleTaskStatus(${task.id})">${task.status === 'pending' ? '✅' : '↩️'}</button>
+                <button class="btn btn-secondary btn-icon" onclick="editTask(${task.id})">✏️</button>
+                <button class="btn btn-secondary btn-icon" onclick="deleteTask(${task.id})">🗑️</button>
+            </div>
+        </div>
+    `;
+    container.appendChild(card);
+}
+
+// --- Helpers ---
+
 function openModal(task = null) {
     elements.modal.classList.remove('hidden');
+
+    // Populate Projects Dropdown
+    const projectSelect = document.getElementById('task-project');
+    projectSelect.innerHTML = '<option value="">No Project</option>';
+    state.projects.forEach(p => {
+        const option = document.createElement('option');
+        option.value = p.id;
+        option.textContent = p.name;
+        projectSelect.appendChild(option);
+    });
+
     if (task) {
         elements.modalTitle.textContent = 'Edit Task';
         document.getElementById('task-id').value = task.id;
@@ -295,18 +463,16 @@ function openModal(task = null) {
         document.getElementById('task-desc').value = task.description;
         document.getElementById('task-date').value = task.dueDate;
         document.getElementById('task-priority').value = task.priority;
+        document.getElementById('task-project').value = task.projectId || '';
     } else {
         elements.modalTitle.textContent = 'New Task';
         elements.taskForm.reset();
         document.getElementById('task-id').value = '';
-        // Default date to today
         document.getElementById('task-date').value = new Date().toISOString().split('T')[0];
     }
 }
 
-function closeModal() {
-    elements.modal.classList.add('hidden');
-}
+function closeModal() { elements.modal.classList.add('hidden'); }
 
 function showToast(message) {
     elements.toast.textContent = message;
@@ -314,17 +480,19 @@ function showToast(message) {
     setTimeout(() => elements.toast.classList.add('hidden'), 3000);
 }
 
-// Global scope for HTML onclick handlers
-window.editTask = (id) => {
-    const task = state.tasks.find(t => t.id == id);
-    openModal(task);
-};
+function promptNewProject() {
+    const name = prompt("Enter project name:");
+    if (name) createProject(name, "#6366f1");
+}
+
+// Global scope
+window.editTask = (id) => openModal(state.tasks.find(t => t.id == id));
 window.deleteTask = deleteTask;
 window.toggleTaskStatus = toggleTaskStatus;
+window.promptNewProject = promptNewProject;
+window.openModal = openModal;
 
-// --- Event Listeners ---
-
-// Navigation
+// Event Listeners
 document.querySelectorAll('.nav-item').forEach(link => {
     link.addEventListener('click', (e) => {
         e.preventDefault();
@@ -333,32 +501,10 @@ document.querySelectorAll('.nav-item').forEach(link => {
     });
 });
 
-document.getElementById('show-register').addEventListener('click', (e) => {
-    e.preventDefault();
-    elements.loginView.classList.remove('active');
-    elements.registerView.classList.add('active');
-});
-
-document.getElementById('show-login').addEventListener('click', (e) => {
-    e.preventDefault();
-    elements.registerView.classList.remove('active');
-    elements.loginView.classList.add('active');
-});
-
-document.getElementById('login-form').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const u = document.getElementById('login-username').value;
-    const p = document.getElementById('login-password').value;
-    login(u, p);
-});
-
-document.getElementById('register-form').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const u = document.getElementById('reg-username').value;
-    const p = document.getElementById('reg-password').value;
-    register(u, p);
-});
-
+document.getElementById('show-register').addEventListener('click', (e) => { e.preventDefault(); elements.loginView.classList.remove('active'); elements.registerView.classList.add('active'); });
+document.getElementById('show-login').addEventListener('click', (e) => { e.preventDefault(); elements.registerView.classList.remove('active'); elements.loginView.classList.add('active'); });
+document.getElementById('login-form').addEventListener('submit', (e) => { e.preventDefault(); login(document.getElementById('login-username').value, document.getElementById('login-password').value); });
+document.getElementById('register-form').addEventListener('submit', (e) => { e.preventDefault(); register(document.getElementById('reg-username').value, document.getElementById('reg-password').value); });
 document.getElementById('logout-btn').addEventListener('click', logout);
 document.getElementById('add-task-btn').addEventListener('click', () => openModal());
 document.getElementById('close-modal').addEventListener('click', closeModal);
@@ -366,15 +512,14 @@ document.getElementById('cancel-task').addEventListener('click', closeModal);
 
 elements.taskForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    const task = {
+    saveTask({
         id: document.getElementById('task-id').value,
         title: document.getElementById('task-title').value,
         description: document.getElementById('task-desc').value,
         dueDate: document.getElementById('task-date').value,
-        priority: document.getElementById('task-priority').value
-    };
-    saveTask(task);
+        priority: document.getElementById('task-priority').value,
+        projectId: document.getElementById('task-project').value ? parseInt(document.getElementById('task-project').value) : null
+    });
 });
 
-// Init
 initAuth();
