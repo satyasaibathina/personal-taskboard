@@ -125,73 +125,26 @@
                         <button id="add-task-btn" class="btn btn-primary">+ New Task</button>
                     </header>
 
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <h3>Tasks Today</h3>
-                            <p class="stat-value" id="stat-today">0</p>
-                        </div>
-                        <div class="stat-card">
-                            <h3>Pending</h3>
-                            <p class="stat-value" id="stat-pending">0</p>
-                        </div>
-                        <div class="stat-card">
-                            <h3>Completed</h3>
-                            <p class="stat-value" id="stat-completed">0</p>
-                        </div>
+                    <div id="upcoming-view" class="view-section hidden">
+                        <h2>Upcoming</h2>
+                        <p>Future tasks timeline.</p>
                     </div>
-
-                    <h3 class="section-title">Recent Tasks</h3>
-                    <div id="task-list" class="task-grid">
-                        <!-- Tasks injected here -->
+                    <div id="calendar-view" class="view-section hidden">
+                        <h2>Calendar</h2>
+                        <p>Calendar view coming soon.</p>
                     </div>
-                </div>
-
-                <!-- Placeholders for other views -->
-                <div id="today-view" class="view-section hidden">
-                    <h2>Today's Tasks</h2>
-                    <p>Tasks due today will appear here.</p>
-                </div>
-                <div id="upcoming-view" class="view-section hidden">
-                    <h2>Upcoming</h2>
-                    <p>Future tasks timeline.</p>
-                </div>
-                <div id="calendar-view" class="view-section hidden">
-                    <h2>Calendar</h2>
-                    <p>Calendar view coming soon.</p>
-                </div>
-                <div id="projects-view" class="view-section hidden">
-                    <h2>Projects</h2>
-                    <p>Project management coming soon.</p>
-                </div>
-                <div id="settings-view" class="view-section hidden">
-                    <h2>Settings</h2>
-                    <p>User preferences coming soon.</p>
-                </div>
+                    <div id="projects-view" class="view-section hidden">
+                        <h2>Projects</h2>
+                        <p>Project management coming soon.</p>
+                    </div>
+                    <div id="settings-view" class="view-section hidden">
+                        <h2>Settings</h2>
+                        <p>User preferences coming soon.</p>
+                    </div>
             </main>
         </div>
 
         <!-- Task Modal -->
-        <div id="task-modal" class="modal hidden">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3 id="modal-title">New Task</h3>
-                    <button id="close-modal" class="close-btn">&times;</button>
-                </div>
-                <form id="task-form">
-                    <input type="hidden" id="task-id">
-                    <div class="form-group">
-                        <label for="task-title">Title</label>
-                    </div>
-                    <div class="modal-actions">
-                        <button type="button" id="cancel-task" class="btn btn-secondary">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Save Task</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Notification Toast -->
-        <div id="toast" class="toast hidden"></div>
     </div>
     <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>

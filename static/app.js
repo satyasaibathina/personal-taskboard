@@ -443,6 +443,70 @@ function renderTaskCard(task, container) {
 
 // --- Helpers ---
 
+// --- Subtask & Recurrence Logic ---
+
+document.getElementById('task-recurring').addEventListener('change', (e) => {
+    document.getElementById('task-recurrence-rule').disabled = !e.target.checked;
+});
+
+document.getElementById('add-subtask-btn').addEventListener('click', async () => {
+    const input = document.getElementById('new-subtask-input');
+    const title = input.value.trim();
+    const parentId = document.getElementById('task-id').value;
+
+    if (title && parentId) {
+        // Create subtask immediately
+        await saveTask({
+            title: title,
+            parentId: parseInt(parentId),
+            status: 'pending',
+            priority: 'medium',
+            dueDate: document.getElementById('task-date').value, // Inherit date?
+            userId: state.currentUser.id
+        });
+        input.value = '';
+        // Refresh subtask list
+        renderSubtasksInModal(parentId);
+    } else if (!parentId) {
+        alert("Please save the main task first before adding subtasks.");
+    }
+});
+
+function renderSubtasksInModal(parentId) {
+    const list = document.getElementById('subtask-list');
+    list.innerHTML = '';
+    const subtasks = state.tasks.filter(t => t.parentId == parentId);
+
+    subtasks.forEach(st => {
+        const item = document.createElement('div');
+        item.className = 'subtask-item';
+        item.style.display = 'flex';
+        item.style.alignItems = 'center';
+        item.style.gap = '10px';
+        item.style.marginBottom = '5px';
+        item.innerHTML = `
+            <input type="checkbox" ${st.status === 'completed' ? 'checked' : ''} onchange="toggleTaskStatus(${st.id})">
+            <span style="${st.status === 'completed' ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${st.title}</span>
+            <button onclick="deleteTask(${st.id})" style="margin-left: auto; background: none; border: none; cursor: pointer;">🗑️</button>
+        `;
+        list.appendChild(item);
+    });
+}
+
+elements.taskForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    saveTask({
+        id: document.getElementById('task-id').value,
+        title: document.getElementById('task-title').value,
+        description: document.getElementById('task-desc').value,
+        dueDate: document.getElementById('task-date').value,
+        priority: document.getElementById('task-priority').value,
+        projectId: document.getElementById('task-project').value ? parseInt(document.getElementById('task-project').value) : null,
+        isRecurring: document.getElementById('task-recurring').checked,
+        recurrenceRule: document.getElementById('task-recurrence-rule').value
+    });
+});
+
 function openModal(task = null) {
     elements.modal.classList.remove('hidden');
 
@@ -464,62 +528,23 @@ function openModal(task = null) {
         document.getElementById('task-date').value = task.dueDate;
         document.getElementById('task-priority').value = task.priority;
         document.getElementById('task-project').value = task.projectId || '';
+
+        // Recurrence
+        document.getElementById('task-recurring').checked = task.isRecurring || false;
+        document.getElementById('task-recurrence-rule').value = task.recurrenceRule || 'daily';
+        document.getElementById('task-recurrence-rule').disabled = !task.isRecurring;
+
+        // Subtasks
+        document.getElementById('subtasks-section').classList.remove('hidden');
+        renderSubtasksInModal(task.id);
     } else {
         elements.modalTitle.textContent = 'New Task';
         elements.taskForm.reset();
         document.getElementById('task-id').value = '';
         document.getElementById('task-date').value = new Date().toISOString().split('T')[0];
+        document.getElementById('subtasks-section').classList.add('hidden'); // Hide subtasks for new task until saved
+        document.getElementById('task-recurrence-rule').disabled = true;
     }
 }
-
-function closeModal() { elements.modal.classList.add('hidden'); }
-
-function showToast(message) {
-    elements.toast.textContent = message;
-    elements.toast.classList.remove('hidden');
-    setTimeout(() => elements.toast.classList.add('hidden'), 3000);
-}
-
-function promptNewProject() {
-    const name = prompt("Enter project name:");
-    if (name) createProject(name, "#6366f1");
-}
-
-// Global scope
-window.editTask = (id) => openModal(state.tasks.find(t => t.id == id));
-window.deleteTask = deleteTask;
-window.toggleTaskStatus = toggleTaskStatus;
-window.promptNewProject = promptNewProject;
-window.openModal = openModal;
-
-// Event Listeners
-document.querySelectorAll('.nav-item').forEach(link => {
-    link.addEventListener('click', (e) => {
-        e.preventDefault();
-        const viewId = link.dataset.view;
-        if (viewId) switchView(viewId);
-    });
-});
-
-document.getElementById('show-register').addEventListener('click', (e) => { e.preventDefault(); elements.loginView.classList.remove('active'); elements.registerView.classList.add('active'); });
-document.getElementById('show-login').addEventListener('click', (e) => { e.preventDefault(); elements.registerView.classList.remove('active'); elements.loginView.classList.add('active'); });
-document.getElementById('login-form').addEventListener('submit', (e) => { e.preventDefault(); login(document.getElementById('login-username').value, document.getElementById('login-password').value); });
-document.getElementById('register-form').addEventListener('submit', (e) => { e.preventDefault(); register(document.getElementById('reg-username').value, document.getElementById('reg-password').value); });
-document.getElementById('logout-btn').addEventListener('click', logout);
-document.getElementById('add-task-btn').addEventListener('click', () => openModal());
-document.getElementById('close-modal').addEventListener('click', closeModal);
-document.getElementById('cancel-task').addEventListener('click', closeModal);
-
-elements.taskForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    saveTask({
-        id: document.getElementById('task-id').value,
-        title: document.getElementById('task-title').value,
-        description: document.getElementById('task-desc').value,
-        dueDate: document.getElementById('task-date').value,
-        priority: document.getElementById('task-priority').value,
-        projectId: document.getElementById('task-project').value ? parseInt(document.getElementById('task-project').value) : null
-    });
-});
 
 initAuth();

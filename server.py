@@ -216,7 +216,10 @@ def get_tasks():
             'priority': t['priority'],
             'status': t['status'],
             'userId': t['user_id'],
-            'projectId': t['project_id']
+            'projectId': t['project_id'],
+            'parentId': t['parent_id'],
+            'isRecurring': bool(t['is_recurring']),
+            'recurrenceRule': t['recurrence_rule']
         })
         
     return jsonify(mapped_tasks), 200
@@ -226,8 +229,11 @@ def create_task():
     data = request.json
     conn = get_db_connection()
     cursor = conn.execute(
-        'INSERT INTO tasks (title, description, due_date, priority, status, user_id, project_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        (data['title'], data['description'], data['dueDate'], data['priority'], data['status'], data['userId'], data.get('projectId'))
+        '''INSERT INTO tasks 
+           (title, description, due_date, priority, status, user_id, project_id, parent_id, is_recurring, recurrence_rule) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+        (data['title'], data['description'], data['dueDate'], data['priority'], data['status'], 
+         data['userId'], data.get('projectId'), data.get('parentId'), data.get('isRecurring', False), data.get('recurrenceRule'))
     )
     conn.commit()
     new_id = cursor.lastrowid
@@ -240,8 +246,12 @@ def update_task(id):
     data = request.json
     conn = get_db_connection()
     conn.execute(
-        'UPDATE tasks SET title = ?, description = ?, due_date = ?, priority = ?, status = ?, project_id = ? WHERE id = ?',
-        (data['title'], data['description'], data['dueDate'], data['priority'], data['status'], data.get('projectId'), id)
+        '''UPDATE tasks SET 
+           title = ?, description = ?, due_date = ?, priority = ?, status = ?, 
+           project_id = ?, parent_id = ?, is_recurring = ?, recurrence_rule = ? 
+           WHERE id = ?''',
+        (data['title'], data['description'], data['dueDate'], data['priority'], data['status'], 
+         data.get('projectId'), data.get('parentId'), data.get('isRecurring', False), data.get('recurrenceRule'), id)
     )
     conn.commit()
     conn.close()
