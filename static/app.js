@@ -743,6 +743,33 @@ if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
 const cancelTaskBtn = document.getElementById('cancel-task');
 if (cancelTaskBtn) cancelTaskBtn.addEventListener('click', closeModal);
 
+// Mobile Sidebar Toggle
+const sidebarToggleBtn = document.getElementById('sidebar-toggle');
+if (sidebarToggleBtn) {
+    sidebarToggleBtn.addEventListener('click', () => {
+        elements.sidebar.classList.toggle('active');
+    });
+}
+
+// Close sidebar when clicking outside (optional but good) or on nav item
+document.addEventListener('click', (e) => {
+    if (window.innerWidth <= 768) {
+        if (!elements.sidebar.contains(e.target) && !sidebarToggleBtn.contains(e.target) && elements.sidebar.classList.contains('active')) {
+            elements.sidebar.classList.remove('active');
+        }
+    }
+});
+
+// Close sidebar on nav item click (mobile)
+document.querySelectorAll('.nav-item').forEach(link => {
+    link.addEventListener('click', (e) => {
+        if (window.innerWidth <= 768) {
+            elements.sidebar.classList.remove('active');
+        }
+        // ... existing logic ...
+    });
+});
+
 initAuth();
 
 

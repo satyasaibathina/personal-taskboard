@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -138,6 +139,10 @@
                             <h3>Due Today</h3>
                             <p class="stat-value" id="stat-today">0</p>
                         </div>
+                    </div>
+
+                    <div class="chart-container" style="margin: 2rem 0; height: 300px;">
+                        <canvas id="task-chart"></canvas>
                     </div>
 
                     <div id="task-list" class="task-grid">
