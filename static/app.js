@@ -440,13 +440,182 @@ function renderTaskCard(task, container) {
     `;
     container.appendChild(card);
 }
-projectSelect.innerHTML = '<option value="">No Project</option>';
-state.projects.forEach(p => {
-    const option = document.createElement('option');
-    option.value = p.id;
-    option.textContent = p.name;
-    projectSelect.appendChild(option);
+// --- Helpers ---
+
+function closeModal() { elements.modal.classList.add('hidden'); }
+
+function showToast(message) {
+    elements.toast.textContent = message;
+    elements.toast.classList.remove('hidden');
+    setTimeout(() => elements.toast.classList.add('hidden'), 3000);
+}
+
+function promptNewProject() {
+    const name = prompt("Enter project name:");
+    if (name) createProject(name, "#6366f1");
+}
+
+// --- Subtask & Recurrence Logic ---
+
+const taskRecurring = document.getElementById('task-recurring');
+if (taskRecurring) {
+    taskRecurring.addEventListener('change', (e) => {
+        const rule = document.getElementById('task-recurrence-rule');
+        if (rule) rule.disabled = !e.target.checked;
+    });
+}
+
+const addSubtaskBtn = document.getElementById('add-subtask-btn');
+if (addSubtaskBtn) {
+    addSubtaskBtn.addEventListener('click', async () => {
+        const input = document.getElementById('new-subtask-input');
+        const title = input.value.trim();
+        const parentId = document.getElementById('task-id').value;
+
+        if (title && parentId) {
+            // Create subtask immediately
+            await saveTask({
+                title: title,
+                parentId: parseInt(parentId),
+                status: 'pending',
+                priority: 'medium',
+                dueDate: document.getElementById('task-date').value, // Inherit date?
+                userId: state.currentUser.id
+            });
+            input.value = '';
+            // Refresh subtask list
+            renderSubtasksInModal(parentId);
+        } else if (!parentId) {
+            alert("Please save the main task first before adding subtasks.");
+        }
+    });
+}
+
+function renderSubtasksInModal(parentId) {
+    const list = document.getElementById('subtask-list');
+    if (!list) return;
+    list.innerHTML = '';
+    const subtasks = state.tasks.filter(t => t.parentId == parentId);
+
+    subtasks.forEach(st => {
+        const item = document.createElement('div');
+        item.className = 'subtask-item';
+        item.style.display = 'flex';
+        item.style.alignItems = 'center';
+        item.style.gap = '10px';
+        item.style.marginBottom = '5px';
+        item.innerHTML = `
+            <input type="checkbox" ${st.status === 'completed' ? 'checked' : ''} onchange="toggleTaskStatus(${st.id})">
+            <span style="${st.status === 'completed' ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${st.title}</span>
+            <button onclick="deleteTask(${st.id})" style="margin-left: auto; background: none; border: none; cursor: pointer;">🗑️</button>
+        `;
+        list.appendChild(item);
+    });
+}
+
+if (elements.taskForm) {
+    elements.taskForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        saveTask({
+            id: document.getElementById('task-id').value,
+            title: document.getElementById('task-title').value,
+            description: document.getElementById('task-desc').value,
+            dueDate: document.getElementById('task-date').value,
+            priority: document.getElementById('task-priority').value,
+            projectId: document.getElementById('task-project').value ? parseInt(document.getElementById('task-project').value) : null,
+            isRecurring: document.getElementById('task-recurring') ? document.getElementById('task-recurring').checked : false,
+            recurrenceRule: document.getElementById('task-recurrence-rule') ? document.getElementById('task-recurrence-rule').value : null
+        });
+    });
+}
+
+function openModal(task = null) {
+    elements.modal.classList.remove('hidden');
+
+    // Populate Projects Dropdown
+    const projectSelect = document.getElementById('task-project');
+    if (projectSelect) {
+        projectSelect.innerHTML = '<option value="">No Project</option>';
+        state.projects.forEach(p => {
+            const option = document.createElement('option');
+            option.value = p.id;
+            option.textContent = p.name;
+            projectSelect.appendChild(option);
+        });
+    }
+
+    if (task) {
+        elements.modalTitle.textContent = 'Edit Task';
+        document.getElementById('task-id').value = task.id;
+        document.getElementById('task-title').value = task.title;
+        document.getElementById('task-desc').value = task.description;
+        document.getElementById('task-date').value = task.dueDate;
+        document.getElementById('task-priority').value = task.priority;
+        if (document.getElementById('task-project')) document.getElementById('task-project').value = task.projectId || '';
+
+        // Recurrence
+        if (document.getElementById('task-recurring')) {
+            document.getElementById('task-recurring').checked = task.isRecurring || false;
+            document.getElementById('task-recurrence-rule').value = task.recurrenceRule || 'daily';
+            document.getElementById('task-recurrence-rule').disabled = !task.isRecurring;
+        }
+
+        // Subtasks
+        if (document.getElementById('subtasks-section')) {
+            document.getElementById('subtasks-section').classList.remove('hidden');
+            renderSubtasksInModal(task.id);
+        }
+    } else {
+        elements.modalTitle.textContent = 'New Task';
+        elements.taskForm.reset();
+        document.getElementById('task-id').value = '';
+        document.getElementById('task-date').value = new Date().toISOString().split('T')[0];
+        if (document.getElementById('subtasks-section')) document.getElementById('subtasks-section').classList.add('hidden');
+        if (document.getElementById('task-recurrence-rule')) document.getElementById('task-recurrence-rule').disabled = true;
+    }
+}
+
+// Global scope
+window.editTask = (id) => openModal(state.tasks.find(t => t.id == id));
+window.deleteTask = deleteTask;
+window.toggleTaskStatus = toggleTaskStatus;
+window.promptNewProject = promptNewProject;
+window.openModal = openModal;
+
+// Event Listeners
+document.querySelectorAll('.nav-item').forEach(link => {
+    link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const viewId = link.dataset.view;
+        if (viewId) switchView(viewId);
+    });
 });
+
+const showRegisterBtn = document.getElementById('show-register');
+if (showRegisterBtn) showRegisterBtn.addEventListener('click', (e) => { e.preventDefault(); elements.loginView.classList.remove('active'); elements.registerView.classList.add('active'); });
+
+const showLoginBtn = document.getElementById('show-login');
+if (showLoginBtn) showLoginBtn.addEventListener('click', (e) => { e.preventDefault(); elements.registerView.classList.remove('active'); elements.loginView.classList.add('active'); });
+
+const loginForm = document.getElementById('login-form');
+if (loginForm) loginForm.addEventListener('submit', (e) => { e.preventDefault(); login(document.getElementById('login-username').value, document.getElementById('login-password').value); });
+
+const registerForm = document.getElementById('register-form');
+if (registerForm) registerForm.addEventListener('submit', (e) => { e.preventDefault(); register(document.getElementById('reg-username').value, document.getElementById('reg-password').value); });
+
+const logoutBtn = document.getElementById('logout-btn');
+if (logoutBtn) logoutBtn.addEventListener('click', logout);
+
+const addTaskBtn = document.getElementById('add-task-btn');
+if (addTaskBtn) addTaskBtn.addEventListener('click', () => openModal());
+
+const closeModalBtn = document.getElementById('close-modal');
+if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
+
+const cancelTaskBtn = document.getElementById('cancel-task');
+if (cancelTaskBtn) cancelTaskBtn.addEventListener('click', closeModal);
+
+initAuth();
 
 if (task) {
     elements.modalTitle.textContent = 'Edit Task';
