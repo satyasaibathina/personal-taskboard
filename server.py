@@ -28,6 +28,10 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
+# Initialize DB (Create tables)
+with app.app_context():
+    db.create_all()
+
 # --- Models ---
 
 class User(db.Model):
