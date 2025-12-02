@@ -29,8 +29,13 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 # Initialize DB (Create tables)
+# Initialize DB (Create tables)
 with app.app_context():
-    db.create_all()
+    try:
+        db.create_all()
+        logger.info("Database tables created successfully.")
+    except Exception as e:
+        logger.error(f"Error creating database tables: {e}")
 
 # --- Models ---
 
