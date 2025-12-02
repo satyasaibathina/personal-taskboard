@@ -617,31 +617,4 @@ if (cancelTaskBtn) cancelTaskBtn.addEventListener('click', closeModal);
 
 initAuth();
 
-if (task) {
-    elements.modalTitle.textContent = 'Edit Task';
-    document.getElementById('task-id').value = task.id;
-    document.getElementById('task-title').value = task.title;
-    document.getElementById('task-desc').value = task.description;
-    document.getElementById('task-date').value = task.dueDate;
-    document.getElementById('task-priority').value = task.priority;
-    document.getElementById('task-project').value = task.projectId || '';
 
-    // Recurrence
-    document.getElementById('task-recurring').checked = task.isRecurring || false;
-    document.getElementById('task-recurrence-rule').value = task.recurrenceRule || 'daily';
-    document.getElementById('task-recurrence-rule').disabled = !task.isRecurring;
-
-    // Subtasks
-    document.getElementById('subtasks-section').classList.remove('hidden');
-    renderSubtasksInModal(task.id);
-} else {
-    elements.modalTitle.textContent = 'New Task';
-    elements.taskForm.reset();
-    document.getElementById('task-id').value = '';
-    document.getElementById('task-date').value = new Date().toISOString().split('T')[0];
-    document.getElementById('subtasks-section').classList.add('hidden'); // Hide subtasks for new task until saved
-    document.getElementById('task-recurrence-rule').disabled = true;
-}
-}
-
-initAuth();
