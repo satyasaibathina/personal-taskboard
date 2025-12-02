@@ -27,6 +27,8 @@ const elements = {
         'upcoming-view': document.getElementById('upcoming-view'),
         'calendar-view': document.getElementById('calendar-view'),
         'projects-view': document.getElementById('projects-view'),
+        'priority-view': document.getElementById('priority-view'),
+        'completed-view': document.getElementById('completed-view'),
         'settings-view': document.getElementById('settings-view')
     },
 
@@ -260,6 +262,8 @@ function switchView(viewId) {
     if (viewId === 'upcoming-view') renderUpcomingView();
     if (viewId === 'projects-view') renderProjectsView();
     if (viewId === 'calendar-view') renderCalendarView();
+    if (viewId === 'priority-view') renderPriorityView();
+    if (viewId === 'completed-view') renderCompletedView();
     if (viewId === 'settings-view') renderSettingsView();
 }
 
@@ -401,6 +405,57 @@ function renderCalendarView() {
         tasksByDate[date].forEach(t => renderTaskCard(t, taskGrid));
         grid.appendChild(dateSection);
     });
+}
+
+function renderPriorityView() {
+    const container = elements.views['priority-view'];
+    container.innerHTML = `
+        <header class="view-header">
+            <div><h2>Priority View</h2><p>Tasks by importance.</p></div>
+            <button class="btn btn-primary" onclick="openModal()">+ New Task</button>
+        </header>
+        <div id="priority-grid"></div>
+    `;
+
+    const grid = document.getElementById('priority-grid');
+    const priorities = ['high', 'medium', 'low'];
+
+    priorities.forEach(priority => {
+        const tasks = state.tasks.filter(t => t.priority === priority && t.status !== 'completed');
+        if (tasks.length > 0) {
+            const section = document.createElement('div');
+            section.style.marginBottom = '2rem';
+            section.innerHTML = `
+                <h3 class="section-title" style="text-transform: capitalize; color: var(--text-main); border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1rem;">
+                    ${priority} Priority
+                </h3>
+                <div class="task-grid"></div>
+            `;
+            const taskGrid = section.querySelector('.task-grid');
+            tasks.forEach(t => renderTaskCard(t, taskGrid));
+            grid.appendChild(section);
+        }
+    });
+
+    if (grid.children.length === 0) {
+        grid.innerHTML = '<p style="text-align: center; color: var(--text-muted);">No pending tasks found.</p>';
+    }
+}
+
+function renderCompletedView() {
+    const container = elements.views['completed-view'];
+    container.innerHTML = `
+        <header class="view-header">
+            <div><h2>Completed Tasks</h2><p>History of your accomplishments.</p></div>
+        </header>
+        <div class="task-grid" id="completed-task-list"></div>
+    `;
+
+    const list = document.getElementById('completed-task-list');
+    const tasks = state.tasks.filter(t => t.status === 'completed').sort((a, b) => new Date(b.dueDate) - new Date(a.dueDate));
+
+    if (tasks.length === 0) list.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted);">No completed tasks yet.</p>';
+    else tasks.forEach(t => renderTaskCard(t, list));
 }
 
 function renderSettingsView() {
