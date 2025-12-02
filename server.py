@@ -29,14 +29,6 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 # Initialize DB (Create tables)
-# Initialize DB (Create tables)
-with app.app_context():
-    try:
-        db.create_all()
-        logger.info("Database tables created successfully.")
-    except Exception as e:
-        logger.error(f"Error creating database tables: {e}")
-
 # --- Models ---
 
 class User(db.Model):
@@ -94,6 +86,14 @@ class Task(db.Model):
             'isRecurring': self.is_recurring,
             'recurrenceRule': self.recurrence_rule
         }
+
+# Initialize DB (Create tables)
+with app.app_context():
+    try:
+        db.create_all()
+        logger.info("Database tables created successfully.")
+    except Exception as e:
+        logger.error(f"Error creating database tables: {e}")
 
 # --- Routes ---
 
