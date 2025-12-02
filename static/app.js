@@ -72,7 +72,8 @@ async function register(username, password) {
         const data = await res.json();
 
         if (res.ok) {
-            login(username, password);
+            showToast('Signed up completed, please login');
+            showLogin();
         } else {
             showToast(data.error || 'Registration failed');
         }
