@@ -504,36 +504,20 @@ function promptNewProject() {
 
 // --- Subtask & Recurrence Logic ---
 
-const taskRecurring = document.getElementById('task-recurring');
-if (taskRecurring) {
-    taskRecurring.addEventListener('change', (e) => {
-        const rule = document.getElementById('task-recurrence-rule');
-        if (rule) rule.disabled = !e.target.checked;
-    });
-}
+// Subtask Management
+let pendingSubtasks = [];
 
 const addSubtaskBtn = document.getElementById('add-subtask-btn');
 if (addSubtaskBtn) {
-    addSubtaskBtn.addEventListener('click', async () => {
+    addSubtaskBtn.addEventListener('click', () => {
         const input = document.getElementById('new-subtask-input');
         const title = input.value.trim();
-        const parentId = document.getElementById('task-id').value;
 
-        if (title && parentId) {
-            // Create subtask immediately
-            await saveTask({
-                title: title,
-                parentId: parseInt(parentId),
-                status: 'pending',
-                priority: 'medium',
-                dueDate: document.getElementById('task-date').value, // Inherit date?
-                userId: state.currentUser.id
-            });
+        if (title) {
+            // Add to pending list instead of saving immediately
+            pendingSubtasks.push({ title: title, status: 'pending' });
             input.value = '';
-            // Refresh subtask list
-            renderSubtasksInModal(parentId);
-        } else if (!parentId) {
-            alert("Please save the main task first before adding subtasks.");
+            renderSubtasksInModal(document.getElementById('task-id').value);
         }
     });
 }
@@ -542,29 +526,62 @@ function renderSubtasksInModal(parentId) {
     const list = document.getElementById('subtask-list');
     if (!list) return;
     list.innerHTML = '';
-    const subtasks = state.tasks.filter(t => t.parentId == parentId);
 
-    subtasks.forEach(st => {
-        const item = document.createElement('div');
-        item.className = 'subtask-item';
-        item.style.display = 'flex';
-        item.style.alignItems = 'center';
-        item.style.gap = '10px';
-        item.style.marginBottom = '5px';
-        item.innerHTML = `
-            <input type="checkbox" ${st.status === 'completed' ? 'checked' : ''} onchange="toggleTaskStatus(${st.id})">
-            <span style="${st.status === 'completed' ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${st.title}</span>
-            <button onclick="deleteTask(${st.id})" style="margin-left: auto; background: none; border: none; cursor: pointer;">🗑️</button>
-        `;
+    // 1. Existing Subtasks (from DB)
+    if (parentId) {
+        const existingSubtasks = state.tasks.filter(t => t.parentId == parentId);
+        existingSubtasks.forEach(st => {
+            const item = createSubtaskElement(st, true);
+            list.appendChild(item);
+        });
+    }
+
+    // 2. Pending Subtasks (Local)
+    pendingSubtasks.forEach((st, index) => {
+        const item = createSubtaskElement(st, false, index);
         list.appendChild(item);
     });
 }
 
+function createSubtaskElement(subtask, isPersisted, index = null) {
+    const item = document.createElement('div');
+    item.className = 'subtask-item';
+    item.style.display = 'flex';
+    item.style.alignItems = 'center';
+    item.style.gap = '10px';
+    item.style.marginBottom = '5px';
+
+    // Checkbox (only for persisted tasks for now, or we can allow toggling pending too)
+    const checkbox = isPersisted ?
+        `<input type="checkbox" ${subtask.status === 'completed' ? 'checked' : ''} onchange="toggleTaskStatus(${subtask.id})">` :
+        `<input type="checkbox" disabled title="Save task first">`;
+
+    // Delete button
+    const deleteBtn = isPersisted ?
+        `<button type="button" onclick="deleteTask(${subtask.id})" style="margin-left: auto; background: none; border: none; cursor: pointer;">🗑️</button>` :
+        `<button type="button" onclick="removePendingSubtask(${index})" style="margin-left: auto; background: none; border: none; cursor: pointer;">❌</button>`;
+
+    item.innerHTML = `
+        ${checkbox}
+        <span style="${subtask.status === 'completed' ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${subtask.title}</span>
+        ${deleteBtn}
+    `;
+    return item;
+}
+
+window.removePendingSubtask = (index) => {
+    pendingSubtasks.splice(index, 1);
+    renderSubtasksInModal(document.getElementById('task-id').value);
+};
+
 if (elements.taskForm) {
-    elements.taskForm.addEventListener('submit', (e) => {
+    elements.taskForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        saveTask({
-            id: document.getElementById('task-id').value,
+        const taskId = document.getElementById('task-id').value;
+
+        // 1. Save Main Task
+        const mainTaskData = {
+            id: taskId,
             title: document.getElementById('task-title').value,
             description: document.getElementById('task-desc').value,
             dueDate: document.getElementById('task-date').value,
@@ -573,12 +590,64 @@ if (elements.taskForm) {
             projectId: document.getElementById('task-project').value ? parseInt(document.getElementById('task-project').value) : null,
             isRecurring: document.getElementById('task-recurring') ? document.getElementById('task-recurring').checked : false,
             recurrenceRule: document.getElementById('task-recurrence-rule') ? document.getElementById('task-recurrence-rule').value : null
-        });
+        };
+
+        try {
+            // We need to handle save manually here to get the ID for subtasks
+            let url = `${API_URL}/tasks`;
+            let method = 'POST';
+            if (mainTaskData.id) {
+                url = `${API_URL}/tasks/${mainTaskData.id}`;
+                method = 'PUT';
+            } else {
+                mainTaskData.userId = state.currentUser.id;
+            }
+
+            const res = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(mainTaskData)
+            });
+
+            if (res.ok) {
+                const savedTask = await res.json();
+                const parentId = savedTask.id || mainTaskData.id; // Get the ID (new or existing)
+
+                // 2. Save Pending Subtasks
+                if (pendingSubtasks.length > 0) {
+                    await Promise.all(pendingSubtasks.map(st =>
+                        fetch(`${API_URL}/tasks`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                title: st.title,
+                                parentId: parentId,
+                                status: 'pending',
+                                priority: 'medium',
+                                dueDate: mainTaskData.dueDate,
+                                userId: state.currentUser.id
+                            })
+                        })
+                    ));
+                }
+
+                await loadTasks();
+                closeModal();
+                showToast('Task saved successfully');
+                refreshCurrentView();
+            } else {
+                showToast('Failed to save task');
+            }
+        } catch (err) {
+            console.error(err);
+            showToast('Server error');
+        }
     });
 }
 
 function openModal(task = null) {
     elements.modal.classList.remove('hidden');
+    pendingSubtasks = []; // Reset pending subtasks
 
     // Populate Projects Dropdown
     const projectSelect = document.getElementById('task-project');
@@ -599,8 +668,7 @@ function openModal(task = null) {
         document.getElementById('task-desc').value = task.description || '';
         document.getElementById('task-date').value = task.dueDate;
         document.getElementById('task-priority').value = task.priority;
-        // Store status in a data attribute or hidden field if needed, but for now we rely on server handling or passing it if we had a field.
-        // Actually, let's add a hidden status field to be safe.
+
         let statusInput = document.getElementById('task-status');
         if (!statusInput) {
             statusInput = document.createElement('input');
@@ -629,7 +697,8 @@ function openModal(task = null) {
         elements.taskForm.reset();
         document.getElementById('task-id').value = '';
         document.getElementById('task-date').value = new Date().toISOString().split('T')[0];
-        if (document.getElementById('subtasks-section')) document.getElementById('subtasks-section').classList.add('hidden');
+        if (document.getElementById('subtasks-section')) document.getElementById('subtasks-section').classList.remove('hidden'); // Always show for new tasks now that we support pending
+        renderSubtasksInModal(null); // Clear list
         if (document.getElementById('task-recurrence-rule')) document.getElementById('task-recurrence-rule').disabled = true;
     }
 }

@@ -267,6 +267,9 @@ def update_task(id):
 @app.route('/api/tasks/<int:id>', methods=['DELETE'])
 def delete_task(id):
     conn = get_db_connection()
+    # Delete subtasks first
+    conn.execute('DELETE FROM tasks WHERE parent_id = ?', (id,))
+    # Delete the task itself
     conn.execute('DELETE FROM tasks WHERE id = ?', (id,))
     conn.commit()
     conn.close()
