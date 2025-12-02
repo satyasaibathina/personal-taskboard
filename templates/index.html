@@ -87,124 +87,182 @@
                     </div>
 
                     <div class="nav-section">
+                        <h3>Views</h3>
+                        <a href="#" class="nav-item" data-view="priority-view">
+                            <span class="icon">🔥</span> Priority
+                        </a>
+                        <a href="#" class="nav-item" data-view="completed-view">
+                            <span class="icon">✅</span> Completed
+                        </a>
+                    </div>
+
+                    <div class="nav-section">
                         <h3>Projects</h3>
+                        <a href="#" class="nav-item" data-view="projects-view">
+                            <span class="icon">📁</span> All Projects
+                        </a>
+                    </div>
+
+                    <div class="nav-section">
+                        <h3>Other</h3>
+                        <a href="#" class="nav-item" data-view="settings-view">
+                            <span class="icon">⚙️</span> Settings
+                        </a>
+                    </div>
+                </nav>
+
+                <div class="sidebar-footer">
+                    <div class="user-profile">
+                        <div class="avatar">👤</div>
                         <div class="user-details">
                             <span id="nav-username">User</span>
                             <small>Free Plan</small>
                         </div>
                     </div>
                     <button id="logout-btn" class="btn-icon" title="Logout">🚪</button>
+                </div>
+            </aside>
+
+            <!-- Main Content Area -->
+            <main id="main-content">
+                <button id="sidebar-toggle" class="btn-icon mobile-only">☰</button>
+
+                <!-- Dashboard View -->
+                <div id="dashboard-view" class="view-section active">
+                    <header class="view-header">
+                        <div>
+                            <h2>Dashboard</h2>
+                            <p id="task-stats">Overview of your tasks</p>
+                        </div>
+                        <button id="add-task-btn" class="btn btn-primary">+ New Task</button>
+                    </header>
+
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3>Pending</h3>
+                            <p class="stat-value" id="stat-pending">0</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Completed</h3>
+                            <p class="stat-value" id="stat-completed">0</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Due Today</h3>
+                            <p class="stat-value" id="stat-today">0</p>
+                        </div>
+                    </div>
+
+                    <div class="chart-container" style="margin: 2rem 0; height: 300px;">
+                        <canvas id="task-chart"></canvas>
+                    </div>
+
+                    <div id="task-list" class="task-grid">
+                        <!-- Tasks will be injected here -->
+                    </div>
+                </div>
+
+                <!-- Today View -->
+                <div id="today-view" class="view-section hidden">
+                    <!-- Content injected by JS -->
+                </div>
+
+                <!-- Upcoming View -->
+                <div id="upcoming-view" class="view-section hidden">
+                    <!-- Content injected by JS -->
+                </div>
+
+                <!-- Calendar View -->
+                <div id="calendar-view" class="view-section hidden">
+                    <!-- Content injected by JS -->
+                </div>
+
+                <!-- Projects View -->
+                <div id="projects-view" class="view-section hidden">
+                    <!-- Content injected by JS -->
+                </div>
+
+                <!-- Priority View -->
+                <div id="priority-view" class="view-section hidden">
+                    <!-- Content injected by JS -->
+                </div>
+
+                <!-- Completed View -->
+                <div id="completed-view" class="view-section hidden">
+                    <!-- Content injected by JS -->
+                </div>
+
+                <!-- Settings View -->
+                <div id="settings-view" class="view-section hidden">
+                    <!-- Content injected by JS -->
+                </div>
+            </main>
         </div>
-        </aside>
 
-        <!-- Main Content Area -->
-        <main id="main-content">
-            <button id="sidebar-toggle" class="btn-icon mobile-only">☰</button>
-            <!-- Dashboard View -->
-            <div id="dashboard-view" class="view-section active">
-                <header class="view-header">
-                    <div>
-                        <h2>Dashboard</h2>
-                        <p id="task-stats">Overview of your tasks</p>
+        <!-- Task Modal -->
+        <div id="task-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modal-title">New Task</h3>
+                    <button id="close-modal" class="close-btn">&times;</button>
+                </div>
+                <form id="task-form">
+                    <input type="hidden" id="task-id">
+                    <div class="form-group">
+                        <label for="task-title">Title</label>
+                        <input type="text" id="task-title" required placeholder="What needs to be done?">
                     </div>
-                    <button id="add-task-btn" class="btn btn-primary">+ New Task</button>
-                </header>
-
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <h3>Pending</h3>
-                        <p class="stat-value" id="stat-pending">0</p>
+                    <div class="form-group">
+                        <label for="task-desc">Description</label>
+                        <textarea id="task-desc" rows="3" placeholder="Add details..."></textarea>
                     </div>
-                    <div class="stat-card">
-                        <h3>Completed</h3>
-                        <p class="stat-value" id="stat-completed">0</p>
+                    <div class="form-group">
+                        <label for="task-date">Due Date</label>
+                        <input type="date" id="task-date" required>
                     </div>
-                    <div class="stat-card">
-                        <h3>Due Today</h3>
-                        <p class="stat-value" id="stat-today">0</p>
-                    </div>
-                </div>
-
-                <div class="chart-container" style="margin: 2rem 0; height: 300px;">
-                    <canvas id="task-chart"></canvas>
-                </div>
-
-                <div id="task-list" class="task-grid">
-                    <!-- Tasks will be injected here -->
-                </div>
-            </div>
-
-            <!-- Today View -->
-            <div id="today-view" class="view-section hidden">
-                <!-- Content injected by JS -->
-            </div>
-
-            <!-- Upcoming View -->
-            <div id="upcoming-view" class="view-section hidden">
-                <!-- Content injected by JS -->
-            </div>
-            <div class="modal-header">
-                <h3 id="modal-title">New Task</h3>
-                <button id="close-modal" class="close-btn">&times;</button>
-            </div>
-            <form id="task-form">
-                <input type="hidden" id="task-id">
-                <div class="form-group">
-                    <label for="task-title">Title</label>
-                    <input type="text" id="task-title" required placeholder="What needs to be done?">
-                </div>
-                <div class="form-group">
-                    <label for="task-desc">Description</label>
-                    <textarea id="task-desc" rows="3" placeholder="Add details..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="task-date">Due Date</label>
-                    <input type="date" id="task-date" required>
-                </div>
-                <div class="form-group">
-                    <label for="task-project">Project</label>
-                    <select id="task-project">
-                        <option value="">No Project</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="task-priority">Priority</label>
-                    <select id="task-priority">
-                        <option value="low">Low</option>
-                        <option value="medium" selected>Medium</option>
-                        <option value="high">High</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Recurrence</label>
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <input type="checkbox" id="task-recurring" style="width: auto;">
-                        <label for="task-recurring" style="margin: 0;">Repeat</label>
-                        <select id="task-recurrence-rule" disabled>
-                            <option value="daily">Daily</option>
-                            <option value="weekly">Weekly</option>
-                            <option value="monthly">Monthly</option>
+                    <div class="form-group">
+                        <label for="task-project">Project</label>
+                        <select id="task-project">
+                            <option value="">No Project</option>
                         </select>
                     </div>
-                </div>
-
-                <div id="subtasks-section" class="form-group hidden">
-                    <label>Subtasks</label>
-                    <div id="subtask-list" style="margin-bottom: 10px;"></div>
-                    <div style="display: flex; gap: 5px;">
-                        <input type="text" id="new-subtask-input" placeholder="Add a step...">
-                        <button type="button" id="add-subtask-btn" class="btn btn-secondary">Add</button>
+                    <div class="form-group">
+                        <label for="task-priority">Priority</label>
+                        <select id="task-priority">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                        </select>
                     </div>
-                </div>
 
-                <div class="modal-actions">
-                    <button type="button" id="cancel-task" class="btn btn-secondary">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Task</button>
-                </div>
-            </form>
-    </div>
-    </div>
+                    <div class="form-group">
+                        <label>Recurrence</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="checkbox" id="task-recurring" style="width: auto;">
+                            <label for="task-recurring" style="margin: 0;">Repeat</label>
+                            <select id="task-recurrence-rule" disabled>
+                                <option value="daily">Daily</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly">Monthly</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="subtasks-section" class="form-group hidden">
+                        <label>Subtasks</label>
+                        <div id="subtask-list" style="margin-bottom: 10px;"></div>
+                        <div style="display: flex; gap: 5px;">
+                            <input type="text" id="new-subtask-input" placeholder="Add a step...">
+                            <button type="button" id="add-subtask-btn" class="btn btn-secondary">Add</button>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" id="cancel-task" class="btn btn-secondary">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Task</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
     <script src="{{ url_for('static', filename='app.js') }}"></script>
     <div id="toast" class="toast hidden"></div>
