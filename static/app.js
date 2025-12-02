@@ -48,6 +48,9 @@ const elements = {
 
 function initAuth() {
     const storedUser = localStorage.getItem('currentUser');
+    const storedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', storedTheme);
+
     if (storedUser) {
         state.currentUser = JSON.parse(storedUser);
         loadData();
@@ -290,6 +293,7 @@ function renderDashboard() {
     });
 
     sortedTasks.forEach(task => renderTaskCard(task, elements.taskList));
+    renderChart();
 }
 
 function renderTodayView() {
@@ -405,14 +409,57 @@ function renderSettingsView() {
         <div class="auth-card active" style="max-width: 600px;">
             <div class="form-group">
                 <label>Theme</label>
-                <select class="form-control" onchange="alert('Theme switching coming soon!')">
-                    <option>Light</option>
-                    <option>Dark</option>
+                <select class="form-control" id="theme-select" onchange="toggleTheme(this.value)">
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
                 </select>
             </div>
             <p style="color: var(--text-muted);">More settings coming soon.</p>
         </div>
     `;
+    // Set current value
+    const currentTheme = localStorage.getItem('theme') || 'light';
+    setTimeout(() => {
+        const select = document.getElementById('theme-select');
+        if (select) select.value = currentTheme;
+    }, 0);
+}
+
+function toggleTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+}
+
+// Chart Instance
+let chartInstance = null;
+
+function renderChart() {
+    const ctx = document.getElementById('task-chart');
+    if (!ctx) return;
+
+    const pending = state.tasks.filter(t => t.status === 'pending').length;
+    const completed = state.tasks.filter(t => t.status === 'completed').length;
+
+    if (chartInstance) chartInstance.destroy();
+
+    chartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Pending', 'Completed'],
+            datasets: [{
+                data: [pending, completed],
+                backgroundColor: ['#6366f1', '#10b981'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
 }
 
 function renderTaskCard(task, container) {
