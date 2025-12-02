@@ -125,22 +125,50 @@
                         <button id="add-task-btn" class="btn btn-primary">+ New Task</button>
                     </header>
 
-                    <div id="upcoming-view" class="view-section hidden">
-                        <h2>Upcoming</h2>
-                        <p>Future tasks timeline.</p>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3>Pending</h3>
+                            <p class="stat-value" id="stat-pending">0</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Completed</h3>
+                            <p class="stat-value" id="stat-completed">0</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Due Today</h3>
+                            <p class="stat-value" id="stat-today">0</p>
+                        </div>
                     </div>
-                    <div id="calendar-view" class="view-section hidden">
-                        <h2>Calendar</h2>
-                        <p>Calendar view coming soon.</p>
+
+                    <div id="task-list" class="task-grid">
+                        <!-- Tasks will be injected here -->
                     </div>
-                    <div id="projects-view" class="view-section hidden">
-                        <h2>Projects</h2>
-                        <p>Project management coming soon.</p>
-                    </div>
-                    <div id="settings-view" class="view-section hidden">
-                        <h2>Settings</h2>
-                        <p>User preferences coming soon.</p>
-                    </div>
+                </div>
+
+                <!-- Today View -->
+                <div id="today-view" class="view-section hidden">
+                    <!-- Content injected by JS -->
+                </div>
+
+                <!-- Upcoming View -->
+                <div id="upcoming-view" class="view-section hidden">
+                    <!-- Content injected by JS -->
+                </div>
+
+                <!-- Calendar View -->
+                <div id="calendar-view" class="view-section hidden">
+                    <!-- Content injected by JS -->
+                </div>
+
+                <!-- Projects View -->
+                <div id="projects-view" class="view-section hidden">
+                    <!-- Content injected by JS -->
+                </div>
+
+                <!-- Settings View -->
+                <div id="settings-view" class="view-section hidden">
+                    <!-- Content injected by JS -->
+                </div>
             </main>
         </div>
 
@@ -211,6 +239,7 @@
         </div>
     </div>
     <script src="{{ url_for('static', filename='app.js') }}"></script>
+    <div id="toast" class="toast hidden"></div>
 </body>
 
 </html>
