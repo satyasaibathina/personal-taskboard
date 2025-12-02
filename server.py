@@ -232,8 +232,8 @@ def create_task():
         '''INSERT INTO tasks 
            (title, description, due_date, priority, status, user_id, project_id, parent_id, is_recurring, recurrence_rule) 
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-        (data['title'], data['description'], data['dueDate'], data['priority'], data['status'], 
-         data['userId'], data.get('projectId'), data.get('parentId'), data.get('isRecurring', False), data.get('recurrenceRule'))
+        (data.get('title'), data.get('description', ''), data.get('dueDate'), data.get('priority', 'medium'), data.get('status', 'pending'), 
+         data.get('userId'), data.get('projectId'), data.get('parentId'), data.get('isRecurring', False), data.get('recurrenceRule'))
     )
     conn.commit()
     new_id = cursor.lastrowid
@@ -245,12 +245,19 @@ def create_task():
 def update_task(id):
     data = request.json
     conn = get_db_connection()
+    
+    # If status is not provided in update, fetch existing or default to pending
+    status = data.get('status')
+    if status is None:
+        existing = conn.execute('SELECT status FROM tasks WHERE id = ?', (id,)).fetchone()
+        status = existing['status'] if existing else 'pending'
+
     conn.execute(
         '''UPDATE tasks SET 
            title = ?, description = ?, due_date = ?, priority = ?, status = ?, 
            project_id = ?, parent_id = ?, is_recurring = ?, recurrence_rule = ? 
            WHERE id = ?''',
-        (data['title'], data['description'], data['dueDate'], data['priority'], data['status'], 
+        (data.get('title'), data.get('description', ''), data.get('dueDate'), data.get('priority', 'medium'), status, 
          data.get('projectId'), data.get('parentId'), data.get('isRecurring', False), data.get('recurrenceRule'), id)
     )
     conn.commit()

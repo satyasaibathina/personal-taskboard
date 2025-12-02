@@ -569,6 +569,7 @@ if (elements.taskForm) {
             description: document.getElementById('task-desc').value,
             dueDate: document.getElementById('task-date').value,
             priority: document.getElementById('task-priority').value,
+            status: document.getElementById('task-status') ? document.getElementById('task-status').value : 'pending',
             projectId: document.getElementById('task-project').value ? parseInt(document.getElementById('task-project').value) : null,
             isRecurring: document.getElementById('task-recurring') ? document.getElementById('task-recurring').checked : false,
             recurrenceRule: document.getElementById('task-recurrence-rule') ? document.getElementById('task-recurrence-rule').value : null
@@ -595,9 +596,20 @@ function openModal(task = null) {
         elements.modalTitle.textContent = 'Edit Task';
         document.getElementById('task-id').value = task.id;
         document.getElementById('task-title').value = task.title;
-        document.getElementById('task-desc').value = task.description;
+        document.getElementById('task-desc').value = task.description || '';
         document.getElementById('task-date').value = task.dueDate;
         document.getElementById('task-priority').value = task.priority;
+        // Store status in a data attribute or hidden field if needed, but for now we rely on server handling or passing it if we had a field.
+        // Actually, let's add a hidden status field to be safe.
+        let statusInput = document.getElementById('task-status');
+        if (!statusInput) {
+            statusInput = document.createElement('input');
+            statusInput.type = 'hidden';
+            statusInput.id = 'task-status';
+            elements.taskForm.appendChild(statusInput);
+        }
+        statusInput.value = task.status;
+
         if (document.getElementById('task-project')) document.getElementById('task-project').value = task.projectId || '';
 
         // Recurrence
