@@ -533,7 +533,15 @@ body {
 }
 
 /* Mobile Responsive */
+.mobile-only {
+    display: none;
+}
+
 @media (max-width: 768px) {
+    .mobile-only {
+        display: block;
+    }
+
     #sidebar {
         transform: translateX(-100%);
     }
@@ -545,6 +553,22 @@ body {
     #main-content {
         margin-left: 0;
         padding: 1rem;
+        padding-top: 3.5rem;
+        /* Space for toggle button */
+    }
+
+    #sidebar-toggle {
+        position: fixed;
+        top: 1rem;
+        left: 1rem;
+        z-index: 60;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        padding: 0.5rem;
+        font-size: 1.25rem;
+        box-shadow: var(--shadow);
+        border-radius: 8px;
+        cursor: pointer;
     }
 
     .stats-grid {
